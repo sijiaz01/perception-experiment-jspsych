@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <meta charset="UTF-8">
+    <title>Second language acquisition of English by Chinese speakers</title>
+    <script src="jspsych-6.1.0/jspsych.js"></script>
+    <script src="jspsych-6.1.0/plugins/jspsych-instructions.js"></script>
+    <script src="jspsych-6.1.0/plugins/jspsych-survey-text.js"></script>
+    <script src="jspsych-6.1.0/plugins/jspsych-html-keyboard-response.js"></script>
+    <script src="jspsych-6.1.0/plugins/jspsych-html-button-response.js"></script>
+    <script src="jspsych-6.1.0/plugins/jspsych-audio-keyboard-response.js"></script>
+    <script src="jspsych-6.1.0/plugins/jspsych-audio-button-response.js"></script>
+    <script src="jspsych-6.1.0/plugins/jspsych-call-function.js"></script>
+    <script src="jspsych-6.1.0/plugins/jspsych-external-html.js"></script>
+    <script src="jspsych-6.1.0/plugins/jspsych-fullscreen.js"></script>
+    <script src="https://cdn.rawgit.com/mattdiamond/Recorderjs/08e7abd9/dist/recorder.js"></script>
+    <link href="jspsych-6.1.0/css/jspsych.css" rel="stylesheet" type="text/css">
+    <link href="ubc.ico" rel="shortcut icon" type="image/x-icon">
+</head>
+<body>
+<script>
+    /* timeline and other global variables */
+    var timeline = [];
+    // if there is an id element in the url query string, prepend it to the randomly generated ID
+    const participant_id = function(){
+      var id_prefix = "";
+      if (Object.keys(jsPsych.data.urlVariables()).includes('id') && jsPsych.data.getURLVariable('id') != "") {
+        id_prefix = jsPsych.data.getURLVariable('id') + "_";
+      }
+      return id_prefix + jsPsych.randomization.randomID(10);
+    }();
+    var timestamp = Date.now();
+
+    // actual total number of steps is 59 (without headphone check it's 7 less), but we want it to look like participants
+    // are only 2/3 done by the time they reach the end of this part of the experiment
+    // so they are more likely to continue on to part 2
+    const total = 80; // with headphones: total 59 "out of" 90; without: total 52 "out of" 80
+    let progress = 0;
+    let second_prompt;
+    let stimulus;
+    let stimulus_type;
+
+    var URL = window.URL || window.webkitURL;
+    var gumStream;  //stream from getUserMedia()
+    var rec;  //Recorder.js object
+    var input;  //MediaStreamAudioSourceNode we'll be recording
+
+    /* shim for AudioContext when it's not avb. */
+    var AudioContext = window.AudioContext || window.webkitAudioContext;
+    var audioContext = new AudioContext(); //audio context to help us record
+    //audioContext = new AudioContext();
+
+    /* all audio files for the two tasks*/
+    /*UPLOAD THE AUDIO FILES TO THE SERVER!!*/
+    const audio = [
+      'l2_acq_files/audio/antiphase_HC_IOS.wav',
+      'l2_acq_files/audio/antiphase_HC_ISO.wav',
+      'l2_acq_files/audio/antiphase_HC_OIS.wav',
+      'l2_acq_files/audio/antiphase_HC_OSI.wav',
+      'l2_acq_files/audio/antiphase_HC_SIO.wav',
+      'l2_acq_files/audio/antiphase_HC_SOI.wav',
+      'l2_acq_files/audio/noise_calib_stim.wav',
+      //practice audio
+      'l2_acq_files/audio/is_ish.wav',
+      'l2_acq_files/audio/is_is.wav',
+      'l2_acq_files/audio/ish_is.wav',
+      'l2_acq_files/audio/is_ish_500.wav',
+      'l2_acq_files/audio/is_is_500.wav',
+      'l2_acq_files/audio/ish_us_500.wav',
+      'l2_acq_files/audio/ish_is_500.wav',
+
+      'l2_acq_files/audio/ae_a.wav',
+      'l2_acq_files/audio/a_ae.wav',
+      'l2_acq_files/audio/ae_ae.wav',
+      'l2_acq_files/audio/a_a.wav',
+      'l2_acq_files/audio/em_eng.wav',
+      'l2_acq_files/audio/em_en.wav',
+      'l2_acq_files/audio/en_eng.wav',
+      'l2_acq_files/audio/eng_em.wav',
+      'l2_acq_files/audio/en_em.wav',
+      'l2_acq_files/audio/eng_en.wav',
+      'l2_acq_files/audio/em_em.wav',
+      'l2_acq_files/audio/en_en.wav',
+      'l2_acq_files/audio/eng_eng.wav',
+      'l2_acq_files/audio/aem_aen.wav',
+      'l2_acq_files/audio/aem_aeng.wav',
+      'l2_acq_files/audio/aen_aeng.wav',
+      'l2_acq_files/audio/am_an.wav',
+      'l2_acq_files/audio/am_ang.wav',
+      'l2_acq_files/audio/an_ang.wav',
+      'l2_acq_files/audio/aem_am.wav',
+      'l2_acq_files/audio/aen_an.wav',
+      'l2_acq_files/audio/aeng_ang.wav',
+      'l2_acq_files/audio/aen_aem.wav',
+      'l2_acq_files/audio/aeng_aem.wav',
+      'l2_acq_files/audio/aeng_aen.wav',
+      'l2_acq_files/audio/an_am.wav',
+      'l2_acq_files/audio/ang_am.wav',
+      'l2_acq_files/audio/ang_an.wav',
+      'l2_acq_files/audio/am_aem.wav',
+      'l2_acq_files/audio/an_aen.wav',
+      'l2_acq_files/audio/ang_aeng.wav',
+      'l2_acq_files/audio/aem_aem.wav',
+      'l2_acq_files/audio/aen_aen.wav',
+      'l2_acq_files/audio/aeng_aeng.wav',
+      'l2_acq_files/audio/am_am.wav',
+      'l2_acq_files/audio/an_an.wav',
+      'l2_acq_files/audio/ang_ang.wav',
+//SR audio
+'l2_acq_files/audio/aem_aen_500.wav',
+'l2_acq_files/audio/aem_aeng_500.wav',
+'l2_acq_files/audio/aen_aeng_500.wav',
+'l2_acq_files/audio/am_an_500.wav',
+'l2_acq_files/audio/am_ang_500.wav',
+'l2_acq_files/audio/an_ang_500.wav',
+'l2_acq_files/audio/aem_am_500.wav',
+'l2_acq_files/audio/aen_an_500.wav',
+'l2_acq_files/audio/aeng_ang_500.wav',
+'l2_acq_files/audio/aen_aem_500.wav',
+'l2_acq_files/audio/aeng_aem_500.wav',
+'l2_acq_files/audio/aeng_aen_500.wav',
+'l2_acq_files/audio/an_am_500.wav',
+'l2_acq_files/audio/ang_am_500.wav',
+'l2_acq_files/audio/ang_an_500.wav',
+'l2_acq_files/audio/am_aem_500.wav',
+'l2_acq_files/audio/an_aen_500.wav',
+'l2_acq_files/audio/ang_aeng_500.wav',
+'l2_acq_files/audio/aem_aem_500.wav',
+'l2_acq_files/audio/aen_aen_500.wav',
+'l2_acq_files/audio/aeng_aeng_500.wav',
+'l2_acq_files/audio/am_am_500.wav',
+'l2_acq_files/audio/an_an_500.wav',
+'l2_acq_files/audio/ang_ang_500.wav',
+'l2_acq_files/audio/aem_an_500.wav',
+'l2_acq_files/audio/aem_ang_500.wav',
+'l2_acq_files/audio/aen_am_500.wav',
+'l2_acq_files/audio/aen_ang_500.wav',
+'l2_acq_files/audio/aeng_am_500.wav',
+'l2_acq_files/audio/aeng_an_500.wav',
+'l2_acq_files/audio/am_aen_500.wav',
+'l2_acq_files/audio/am_aeng_500.wav',
+'l2_acq_files/audio/an_aem_500.wav',
+'l2_acq_files/audio/an_aeng_500.wav',
+'l2_acq_files/audio/ang_aem_500.wav',
+'l2_acq_files/audio/ang_aen_500.wav'
+
+    ];
+
+
+    /* welcome page to be EDITTED! */
+    const welcome = {
+    type: 'instructions',
+    show_clickable_nav: true,
+    pages: [
+        //P1
+        '<div style="margin: 25px 200px 25px 200px; text-align: left">' +
+        '<p> Welcome! </p>' +
+        '<p> To participate in this study, you need to: </p>' +
+        '<p> - use computer or laptop, wear your <strong>headphones</strong>, and complete this study in a <strong>quiet</strong> place </p>' +
+        '<p> - do the study in a <strong>single sitting</strong>, without interruptions and distractions </p>' +
+        '<p> This study consists of the following parts: </p>' +
+        '<p> - a consent page (whether or not you agree to participate)</p>' +
+        '<p> - a hearing test to check your headphones </p>' +
+        '<p> - an experiment in which you will listen to some sounds and answer questions about them </p>' +
+        '<p> - a short lexical test </p>' +
+        '<p> - a second experiment in which you will listen to some sounds and answer questions about them </p>' +
+        '<p> - a language background questionnaire </p>' +
+        '<p> The total duration of the study will be about 40 mins </p>' +
+        '<p>Click <strong>Next</strong> to see the consent page.</p>'+
+        '<br>' +
+        '<p> 欢迎！ </p>' +
+        '<p>要参与这项研究，您需要：</p>' +
+        '<p> - 使用台式或笔记本<strong>电脑</strong>，戴上<strong>耳机</strong>，并在<strong>安静</strong>的地方完成这项研究</p>' +
+        '<p> - 请<strong>一次性</strong>完成，避免任何中断和干扰</p>' +
+        '<p> 本研究由以下几部分组成：</p>' +
+        '<p> - 同意书页面 </p>' +
+        '<p> - 检查耳机的听力测试</p>' +
+        '<p> - 一项感知实验，您将听到一些语音并回答问题</p>' +
+        '<p> - 一个词汇小测试</p>' +
+        '<p> - 第二个感知实验，您将听到一些语音并回答问题</p>' +
+        '<p> - 语言背景调查问卷</p>' +
+        '<p> 研究总时长约为40分钟 </p>' +
+        '<p>点击<strong>Next</strong>查看同意页面。</p>'+
+        '</div>'
+    ],
+    on_finish: () => {
+        progress += 1;
+        jsPsych.setProgressBar(progress/total);
+    }
+    };
+    //timeline.push(welcome);
+
+    /* consent */
+    const consent = {
+        type: 'external-html',
+        url: 'l2_acq_files/consent_form.html',
+        cont_btn: 'start',
+        on_finish: () => {
+            progress += 1;
+            jsPsych.setProgressBar(progress/total);
+        }
+    };
+    //timeline.push(consent);  //2
+
+    /* volume check + headphone check instructions*/
+    const volume_check = {
+        type: 'instructions',
+        show_clickable_nav: true,
+        button_label_previous: 'Previous',
+        button_label_next: 'Next',
+        pages: ['<div style="margin: 25px 200px 25px 200px; text-align: center">' +
+          '<p>First, you will complete a hearing test. In this task, you will hear three tones. You will need to determine which tone is the <strong>quietest</strong> of the three by selecting from the choices: 1st, 2nd, or 3rd. There will be six questions total. You are strongly encouraged to use headphones for this hearing test and for the rest of the experiment.</p>' +
+          '<p>首先，您将完成耳机测试。在此任务中，您将听到三段声音。您需要通过从以下选项中进行选择来确定三段声音中<strong>声音最小</strong>的一个：第一个（1st）、第二个（2nd）或第三个（3rd）。总共会有六个问题。强烈建议您在此次听力测试和其余实验中使用耳机。</p>' +
+
+              //Button
+              '<audio id="player" src="l2_acq_files/audio/noise_calib_stim.wav">Please use a browser that supports .wav files </audio>' +
+              '<div><button class="jspsych-btn" onclick="document.getElementById(\'player\').play()"><strong>Click here to test your volume level. 点击此处测试音量 </strong></button></div>' +
+              '<p>Click <strong>Next</strong> to begin the hearing test.</p>'+
+              '<p>点击<strong>Next</strong> 开始耳机测试。</p>'+
+              '</div>'
+
+          ],
+        on_finish: () => {
+            progress += 1;
+            jsPsych.setProgressBar(progress/total);
+        }
+    };
+    //timeline.push(volume_check);  //3
+
+
+    //----------------------------------------------------------------------------------//
+    // HEADPHONE CHECK TRIAL
+    // Adapted from https://github.com/mcdermottLab/HeadphoneCheck
+    //----------------------------------------------------------------------------------//
+      var headphone_stimuli = [
+        {stimulus: 'l2_acq_files/audio/antiphase_HC_IOS.wav', correct_response: '2'},
+        {stimulus: 'l2_acq_files/audio/antiphase_HC_ISO.wav', correct_response: '1'},
+        {stimulus: 'l2_acq_files/audio/antiphase_HC_OIS.wav', correct_response: '2'},
+        {stimulus: 'l2_acq_files/audio/antiphase_HC_OSI.wav', correct_response: '1'},
+        {stimulus: 'l2_acq_files/audio/antiphase_HC_SIO.wav', correct_response: '0'},
+        {stimulus: 'l2_acq_files/audio/antiphase_HC_SOI.wav', correct_response: '0'},
+        ];
+
+        var headphone_check_trial = {
+        type: 'audio-button-response',
+        stimulus: jsPsych.timelineVariable('stimulus'),
+        prompt: 'Which of the three sounds was the quietest? 三段声音中哪个声音最小？' ,
+        choices: ['1st','2nd','3rd'],
+        response_ends_trial: true,
+        post_trial_gap: 1000,
+        data: {correct_response: jsPsych.timelineVariable('correct_response')},
+        on_finish: function(data){
+            data.correct = data.button_pressed === data.correct_response;
+        }
+    };
+    //----------------------------------------------------------------------------------//
+    // HEADPHONE CHECK BLOCK
+    //----------------------------------------------------------------------------------//
+    var headphone_check = {
+        timeline: [headphone_check_trial],
+        timeline_variables: headphone_stimuli,
+        randomize_order: true,
+        repetitions: 1
+    };
+    //timeline.push(headphone_check);//4
+
+    //----------------------------------------------------------------------------------//
+    // HEADPHONE CHECK, BOOLEAN LOGIC AND INSTRUCTIONS **IF DID NOT PASS**
+    //----------------------------------------------------------------------------------//
+    var pass_check = {
+        type: 'html-keyboard-response',
+        stimulus: '',
+        choices: jsPsych.NO_KEYS,
+        trial_duration: 0,
+        on_finish: function() {
+            var correct_trials = jsPsych.data.get().filter({
+                correct: true,
+                trial_type: 'audio-button-response'
+            }).count();
+            if (correct_trials < 4) {
+                jsPsych.endExperiment('<p>You did not pass the hearing test. You answered ' + correct_trials + ' of 6 correctly, and 4 is the minimum passing score. </p>' +
+                '<p>You are strongly encouraged to wear headphones and complete this study in a quiet location. If you were wearing headphones, please try again by refreshing the page. If this was not your first attempt, and you are still having difficulty passing the hearing test and would still like to participate in this study, please contact Sijia Zhang at sijia01@student.ubc.ca.</p>'+
+                '<br>'+
+                '<p>您没有通过听力测试。您正确回答了' + correct_trials + '/6道题，答对4道是最低通过分数。 </p>' +
+                '<p>强烈建议您戴上耳机并在安静的地方完成这项研究。如果您戴着耳机，请刷新页面重试。如果这不是您的第一次尝试，难以通过听力测试并仍想参加本研究，请通过 sijia01@student.ubc.ca 联系张思嘉。</p>');
+            }
+        }
+    };
+    //timeline.push(pass_check);
+
+    //----------------------------------------------------------------------------------//
+    // HEADPHONE CHECK INSTRUCTIONS **IF PASSED**
+    //----------------------------------------------------------------------------------//
+    var passed_headphone_check ={
+        type: 'instructions',
+        show_clickable_nav: true,
+        pages: [
+            //P1
+            '<p>You passed the hearing test!</p>' +
+            '<p>Click <strong>Next</strong> to continue.</p>' +
+            '<br>'+
+            '<p>您通过了听力测试！</p>' +
+            '<p>点击 <strong>Next</strong> 以继续.</p>'
+            ]
+    };
+    //timeline.push(passed_headphone_check);
+
+
+    /* AX discrimination test */
+    //data coding from the sheet "ax"
+    //the same condition has been put multiple times to match the total num of different trials
+    //CHECK WHETHER THIS WORK! (REPETITIONS AS WANTED)
+    const AX_practice_stimuli = [
+
+{Stimulus:"l2_acq_files/audio/is_ish.wav", Item:"is_ish", Type:"practice", Condition:"cons", Correct_response:74, Order:"1", Task:"AX_practice"},
+{Stimulus:"l2_acq_files/audio/is_is.wav", Item:"is_is", Type:"practice", Condition:"cons", Correct_response:70, Order:"1", Task:"AX_practice"},
+{Stimulus:"l2_acq_files/audio/ish_is.wav", Item:"ish_is", Type:"practice", Condition:"cons", Correct_response:74, Order:"1", Task:"AX_practice"}
+
+    ];
+
+    const AX_vowel_stimuli = [
+
+{Stimulus:"l2_acq_files/audio/ae_a.wav", Item:"ae_a", Type:"vowel", Condition:"vowel", Correct_response:74, Order:"1", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/a_ae.wav", Item:"a_ae", Type:"vowel", Condition:"vowel", Correct_response:74, Order:"2", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/ae_ae.wav", Item:"ae_ae", Type:"vowel", Condition:"same", Correct_response:70, Order:"1", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/a_a.wav", Item:"a_a", Type:"vowel", Condition:"same", Correct_response:70, Order:"1", Task:"AX"}
+];
+    const AX_nasal_stimuli = [
+{Stimulus:"l2_acq_files/audio/em_eng.wav", Item:"em_eng", Type:"nasal", Condition:"nasal", Correct_response:74, Order:"1", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/em_en.wav", Item:"em_en", Type:"nasal", Condition:"nasal", Correct_response:74, Order:"1", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/en_eng.wav", Item:"en_eng", Type:"nasal", Condition:"nasal", Correct_response:74, Order:"1", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/eng_em.wav", Item:"eng_em", Type:"nasal", Condition:"nasal", Correct_response:74, Order:"2", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/en_em.wav", Item:"en_em", Type:"nasal", Condition:"nasal", Correct_response:74, Order:"2", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/eng_en.wav", Item:"eng_en", Type:"nasal", Condition:"nasal", Correct_response:74, Order:"2", Task:"AX"},
+//repetitions of same match different
+{Stimulus:"l2_acq_files/audio/em_em.wav", Item:"em_em", Type:"nasal", Condition:"same", Correct_response:70, Order:"1", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/en_en.wav", Item:"en_en", Type:"nasal", Condition:"same", Correct_response:70, Order:"1", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/eng_eng.wav", Item:"eng_eng ", Type:"nasal", Condition:"same", Correct_response:70, Order:"1", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/em_em.wav", Item:"em_em", Type:"nasal", Condition:"same", Correct_response:70, Order:"1", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/en_en.wav", Item:"en_en", Type:"nasal", Condition:"same", Correct_response:70, Order:"1", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/eng_eng.wav", Item:"eng_eng", Type:"nasal", Condition:"same", Correct_response:70, Order:"1", Task:"AX"}
+
+];
+    const AX_VN_stimuli = [
+{Stimulus:"l2_acq_files/audio/aem_aen.wav", Item:"aem_aen", Type:"vowel+nasal", Condition:"nasal", Correct_response:74, Order:"1", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/aem_aeng.wav", Item:"aem_aeng", Type:"vowel+nasal", Condition:"nasal", Correct_response:74, Order:"1", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/aen_aeng.wav", Item:"aen_aeng", Type:"vowel+nasal", Condition:"nasal", Correct_response:74, Order:"1", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/am_an.wav", Item:"am_an", Type:"vowel+nasal", Condition:"nasal", Correct_response:74, Order:"1", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/am_ang.wav", Item:"am_ang", Type:"vowel+nasal", Condition:"nasal", Correct_response:74, Order:"1", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/an_ang.wav", Item:"an_ang", Type:"vowel+nasal", Condition:"nasal", Correct_response:74, Order:"1", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/aem_am.wav", Item:"aem_am", Type:"vowel+nasal", Condition:"vowel", Correct_response:74, Order:"1", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/aen_an.wav", Item:"aen_an", Type:"vowel+nasal", Condition:"vowel", Correct_response:74, Order:"1", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/aeng_ang.wav", Item:"aeng_ang", Type:"vowel+nasal", Condition:"vowel", Correct_response:74, Order:"1", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/aen_aem.wav", Item:"aen_aem", Type:"vowel+nasal", Condition:"nasal", Correct_response:74, Order:"2", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/aeng_aem.wav", Item:"aeng_aem", Type:"vowel+nasal", Condition:"nasal", Correct_response:74, Order:"2", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/aeng_aen.wav", Item:"aeng_aen", Type:"vowel+nasal", Condition:"nasal", Correct_response:74, Order:"2", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/an_am.wav", Item:"an_am", Type:"vowel+nasal", Condition:"nasal", Correct_response:74, Order:"2", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/ang_am.wav", Item:"ang_am", Type:"vowel+nasal", Condition:"nasal", Correct_response:74, Order:"2", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/ang_an.wav", Item:"ang_an", Type:"vowel+nasal", Condition:"nasal", Correct_response:74, Order:"2", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/am_aem.wav", Item:"am_aem", Type:"vowel+nasal", Condition:"vowel", Correct_response:74, Order:"2", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/an_aen.wav", Item:"an_aen", Type:"vowel+nasal", Condition:"vowel", Correct_response:74, Order:"2", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/ang_aeng.wav", Item:"ang_aeng", Type:"vowel+nasal", Condition:"vowel", Correct_response:74, Order:"2", Task:"AX"},
+//repetitions of same match different
+{Stimulus:"l2_acq_files/audio/aem_aem.wav", Item:"aem_aem", Type:"vowel+nasal", Condition:"same", Correct_response:70, Order:"1", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/aen_aen.wav", Item:"aen_aen", Type:"vowel+nasal", Condition:"same", Correct_response:70, Order:"1", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/aeng_aeng.wav", Item:"aeng_aeng", Type:"vowel+nasal", Condition:"same", Correct_response:70, Order:"1", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/am_am.wav", Item:"am_am", Type:"vowel+nasal", Condition:"same", Correct_response:70, Order:"1", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/an_an.wav", Item:"an_an", Type:"vowel+nasal", Condition:"same", Correct_response:70, Order:"1", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/ang_ang.wav", Item:"ang_ang", Type:"vowel+nasal", Condition:"same", Correct_response:70, Order:"1", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/aem_aem.wav", Item:"aem_aem", Type:"vowel+nasal", Condition:"same", Correct_response:70, Order:"1", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/aen_aen.wav", Item:"aen_aen", Type:"vowel+nasal", Condition:"same", Correct_response:70, Order:"1", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/aeng_aeng.wav", Item:"aeng_aeng", Type:"vowel+nasal", Condition:"same", Correct_response:70, Order:"1", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/am_am.wav", Item:"am_am", Type:"vowel+nasal", Condition:"same", Correct_response:70, Order:"1", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/an_an.wav", Item:"an_an", Type:"vowel+nasal", Condition:"same", Correct_response:70, Order:"1", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/ang_ang.wav", Item:"ang_ang", Type:"vowel+nasal", Condition:"same", Correct_response:70, Order:"1", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/aem_aem.wav", Item:"aem_aem", Type:"vowel+nasal", Condition:"same", Correct_response:70, Order:"1", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/aen_aen.wav", Item:"aen_aen", Type:"vowel+nasal", Condition:"same", Correct_response:70, Order:"1", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/aeng_aeng.wav", Item:"aeng_aeng", Type:"vowel+nasal", Condition:"same", Correct_response:70, Order:"1", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/am_am.wav", Item:"am_am", Type:"vowel+nasal", Condition:"same", Correct_response:70, Order:"1", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/an_an.wav", Item:"an_an", Type:"vowel+nasal", Condition:"same", Correct_response:70, Order:"1", Task:"AX"},
+{Stimulus:"l2_acq_files/audio/ang_ang.wav", Item:"ang_ang", Type:"vowel+nasal", Condition:"same", Correct_response:70, Order:"1", Task:"AX"}
+
+    ];
+
+
+    /* ADD PRACTIVE/TRAINING TRIALS*/
+
+    const AX_instructions = {
+      type: 'instructions',
+      show_clickable_nav: true,
+      //button_label_previous: 'Previous',
+      button_label_next: 'Ready to start',
+      pages: ['<div style="margin: 25px 200px 25px 200px; text-align: center">' +
+      '<p>Before starting the experiment, you will have some practice now. </p>' +
+      '<p>On each trial, you will hear two sounds in a sequence.</p>' +
+      '<p>Please indicate whether the two sounds you hear are the <strong>same</strong> or <strong>different</strong>. </p>' +
+      '<p>Press <strong>"f"</strong> on your keyboard for <strong>same</strong>, and <strong>"j"</strong> on your keyboard for <strong>different</strong>. </p>' +
+      '<p>Once you respond, you will see your response time and your overall accuracy on the next page.</p>' +
+      '<p>Please respond as <strong>quickly</strong> and as <strong>accurately</strong> as possible.</p>' +
+      '<br>' +
+      '<p>在实验开始之前，您将进行一些练习。 </p>' +
+      '<p>在每次试验中，您会依次听到两个声音。</p>' +
+      '<p>请回答您听到的两个声音是<strong>相同</strong>还是<strong>不同</strong>。 </p>' +
+      '<p>按键盘上的<strong>“f”</strong>表示<strong>相同</strong>，按键盘上的<strong>“j”</strong>表示<strong>不同</strong >。 </p>' +
+      '<p>作答之后，您会在下一页看到作答时间和整体正确率。</p>' +
+      '<p>请尽可能<strong>快速</strong>并<strong>准确</strong>作答。</p>' +
+      '</div>'
+    ],
+      on_finish: () => {
+          progress += 1;
+          jsPsych.setProgressBar(progress/total);
+      }
+    };
+    //timeline.push(AX_instructions);
+
+    //add response window 3s
+    //add feedback window
+    //add inter trial time window?
+    const AX_test = {
+      type: 'audio-keyboard-response',
+      stimulus: jsPsych.timelineVariable('Stimulus'),
+      choices: ['f', 'j'],
+      prompt: "<p>Are the two sounds the same or different? (press 'f' for same, and 'j' for different.) </p>" +
+      '<br>' +
+      "<p>这两个声音是相同的还是不同的？（按“f”键表示相同，按“j”键表示不同。）</p>",
+      response_ends_trial: true,
+      trial_duration: 5000, //max time to respond, counts from beginning of the word (stimulus =< 2000)
+      data: {
+      'audio': jsPsych.timelineVariable('Stimulus'),
+			'item': jsPsych.timelineVariable('Item'),
+			'trialtype': jsPsych.timelineVariable('Type'),
+      'condition': jsPsych.timelineVariable('Condition'),
+      'correct_response': jsPsych.timelineVariable('Correct_response'),
+      'order': jsPsych.timelineVariable('Order'),
+      'task': jsPsych.timelineVariable('Task')
+    },
+      on_finish: data => {
+          //encode whether the data is correctly responded
+          data.responded = data.key_press !== null;
+          data.correct = data.key_press === data.correct_response;
+          progress += 1;
+          jsPsych.setProgressBar(progress/total);
+      }
+    };
+
+    //feedback window: reaction time + overall accuracy rate
+    var feedback = {
+        type: 'html-keyboard-response',
+        stimulus: function(){
+            //make sure there is a response recorded for the last trial
+            var last_trial_response = jsPsych.data.get().last(1).values()[0].responded;
+            //get the reaction time
+            var last_trial_rt = jsPsych.data.get().last(1).values()[0].rt;
+            //calculate overall accuracy based on correctly responded trials and all trial num
+            var correct_trials = jsPsych.data.get().filter({
+                correct: true,
+                task: 'AX'
+            }).count();
+            var completed_trials = jsPsych.data.get().filter({task: 'AX'}).count();
+            //var all_trials = jsPsych.data.get().filterCustom(function(trial){
+              //return trial.trial_index < jsPsych.getProgress().current_trial_global;},
+            //{trial_type: 'audio-keyboard-response'
+            //trial_index < jsPsych.getProgress().current_trial_global
+            //}).count();
+
+            var overall_accuracy = (correct_trials / completed_trials) * 100;
+            if(last_trial_response){
+                return "<p>Response detected.</p>" + '<p>Your response time is ' + last_trial_rt/1000 + ' seconds.</p>'
+                + '<p>Your overall response accuracy is ' + overall_accuracy + '%.</p>' + '<p>Please continue to respond as fast as you can.</p>' +
+                '<br>' +
+                "<p>检测到回答。</p>" + '<p>您的作答时间是' + last_trial_rt/1000 +' 秒。</p>'
+                + '<p>您的整体正确率是'+overall_accuracy + '%.</p>' + '<p>请继续尽快作答。</p>'
+            } else {
+                return "<p>No response detected.</p>" + '<p>Please continue to respond as fast as you can.</p>' +
+                '<br>' +
+                "<p>未检测到响应。</p>" + '<p>请继续尽快作答。</p>'
+            }
+        },
+        choices: jsPsych.NO_KEYS,
+        trial_duration: 2000
+    };
+
+    var practice_feedback = {
+        type: 'html-keyboard-response',
+        stimulus: function(){
+            //make sure there is a response recorded for the last trial
+            var last_trial_response = jsPsych.data.get().last(1).values()[0].responded;
+            //get the reaction time
+            var last_trial_rt = jsPsych.data.get().last(1).values()[0].rt;
+            //calculate overall accuracy based on correctly responded trials and all trial num
+            var correct_trials = jsPsych.data.get().filter({
+                correct: true,
+                task: 'AX_practice'
+            }).count();
+            var completed_trials = jsPsych.data.get().filter({task: 'AX_practice'}).count();
+            //var all_trials = jsPsych.data.get().filterCustom(function(trial){
+              //return trial.trial_index < jsPsych.getProgress().current_trial_global;},
+            //{trial_type: 'audio-keyboard-response'
+            //trial_index < jsPsych.getProgress().current_trial_global
+            //}).count();
+
+            var overall_accuracy = (correct_trials / completed_trials) * 100;
+            if(last_trial_response){
+                return "<p>Response detected.</p>" + '<p>Your response time is ' + last_trial_rt/1000 + ' seconds.</p>'
+                + '<p>Your overall response accuracy is ' + overall_accuracy + '%.</p>' + '<p>Please continue to respond as fast as you can.</p>' +
+                '<br>' +
+                "<p>检测到回答。</p>" + '<p>您的作答时间是' + last_trial_rt/1000 +' 秒。</p>'
+                + '<p>您的整体正确率是'+overall_accuracy + '%.</p>' + '<p>请继续尽快作答。</p>'
+            } else {
+                return "<p>No response detected.</p>" + '<p>Please continue to respond as fast as you can.</p>' +
+                '<br>' +
+                "<p>未检测到响应。</p>" + '<p>请继续尽快作答。</p>'
+            }
+        },
+        choices: jsPsych.NO_KEYS,
+        trial_duration: 2000
+    };
+
+    //add a break for the VN block
+    var trial_count = 0;
+
+    var break_trial = {
+      type: 'html-keyboard-response',
+      stimulus:  "<p style='font-size: 25px'>Time to take a break!</p>" +
+          "<p style='font-size: 25px'>Take a rest for about a minute. Then, continue by pressing 'c' on your keyboard. </p>"+
+          '<br>'+
+          "<p style='font-size: 25px'>是时候休息一下了!</p>" +
+          "<p style='font-size: 25px'>请休息一分钟左右。然后，按键盘上的“c”键继续。</p>",
+
+
+      choices: "c"
+  };
+
+var break_conditional = {
+  timeline: [break_trial],
+  conditional_function: function() {
+    // increment trial count - in first run through the timeline variables procedure, trial_count will be equal to 1
+    trial_count++;
+    if (trial_count % 55 == 0) {
+      // if the trial count is divisible by 55, then run the break trial
+      return true;
+    } else {
+      // otherwise skip the break trial
+      return false;
+    }
+  }
+};
+    //push practice block
+    const AX_practice_block = {
+      timeline: [AX_test, practice_feedback],
+      timeline_variables: AX_practice_stimuli,
+      repetitions: 1,
+      randomize_order: false
+  };
+  //timeline.push(AX_practice_block);
+
+    //instruction page before the real experiment
+    const AX_proceedtest = {
+      type: 'instructions',
+      show_clickable_nav: true,
+      //button_label_previous: 'Previous',
+      button_label_next: 'Ready to start',
+      pages: ['<div style="margin: 25px 200px 25px 200px; text-align: center">' +
+      '<p>That was practice! Now you can start the experiment. Remember: </p>' +
+      '<p>Please indicate whether the two sounds you hear are the <strong>same</strong> or <strong>different</strong>. </p>' +
+      '<p>Press <strong>"f"</strong> on your keyboard for <strong>same</strong>, and <strong>"j"</strong> on your keyboard for <strong>different</strong>. </p>' +
+      '<p>You will be offered a break in the middle of the experiment.</p>' +
+      '<p>Please respond as <strong>quickly</strong> and as <strong>accurately</strong> as possible.</p>' +
+      '<br>' +
+      '<p>以上是练习！现在您可以开始实验了。记住：</p>' +
+      '<p>请回答您听到的两个声音是<strong>相同</strong>还是<strong>不同</strong>的。</p>' +
+      '<p>请按键盘上的<strong>“f”</strong>表示<strong>相同</strong>，按键盘上的<strong>“j”</strong>表示<strong>不同</strong >。 </p>' +
+      '<p>在实验过程中您将获得一次休息机会。</p>' +
+      '<p>请尽可能<strong>快速</strong>并<strong>准确</strong>作答。</p>' +
+
+      '</div>'
+    ],
+      on_finish: () => {
+          progress += 1;
+          jsPsych.setProgressBar(progress/total);
+      }
+    };
+    //timeline.push(AX_proceedtest);
+
+    //vowel block of the experiment
+    const AX_vowel_block = {
+      timeline: [AX_test, feedback],
+      timeline_variables: AX_vowel_stimuli,
+      repetitions: 3,
+      randomize_order: true
+    };
+    //timeline.push(AX_vowel_block);
+
+    const AX_nasal_block = {
+      timeline: [AX_test, feedback],
+      timeline_variables: AX_nasal_stimuli,
+      repetitions: 3,
+      randomize_order: true
+    };
+    //timeline.push(AX_nasal_block);
+
+    const AX_VN_block = {
+      timeline: [break_conditional, AX_test, feedback],
+      timeline_variables: AX_VN_stimuli,
+      repetitions: 3,
+      randomize_order: true
+    };
+    //timeline.push(AX_VN_block);
+
+    //AX ending
+    const AX_ending = {
+      type: 'instructions',
+      show_clickable_nav: true,
+      //button_label_previous: 'Previous',
+      button_label_next: 'Next',
+      pages: ['<div style="margin: 25px 200px 25px 200px; text-align: center">' +
+      '<p>This is the end of this experiment. </p>' +
+      '<p>Press the button <strong>"Next"</strong> to proceed to the next part.</p>' +
+      '<br>' +
+      '<p>该实验到此结束。</p>' +
+      '<p>点击按钮<strong>"Next"</strong>进入下一部分。</p>' +
+      '</div>'
+    ],
+      on_finish: () => {
+          progress += 1;
+          jsPsych.setProgressBar(progress/total);
+      }
+    };
+    //timeline.push(AX_ending);
+
+    //LexTALE
+    //Items
+    const LEX_stimuli = [
+{Stimulus:"<p style=\"font-size: 48px;\">platery</p>", Item:"platery", Type:"nonword", Correct_response:"1", Task:"LEX_practice"},
+{Stimulus:"<p style=\"font-size: 48px;\">denial</p>", Item:"denial", Type:"word", Correct_response:"0", Task:"LEX_practice"},
+{Stimulus:"<p style=\"font-size: 48px;\">generic</p>", Item:"generic", Type:"word", Correct_response:"0", Task:"LEX_practice"},
+{Stimulus:"<p style=\"font-size: 48px;\">mensible</p>", Item:"mensible", Type:"nonword", Correct_response:"1", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">scornful</p>", Item:"scornful", Type:"word", Correct_response:"0", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">stoutly</p>", Item:"stoutly", Type:"word", Correct_response:"0", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">ablaze</p>", Item:"ablaze", Type:"word", Correct_response:"0", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">kermshaw</p>", Item:"kermshaw", Type:"nonword", Correct_response:"1", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">moonlit</p>", Item:"moonlit", Type:"word", Correct_response:"0", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">lofty</p>", Item:"lofty", Type:"word", Correct_response:"0", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">hurricane</p>", Item:"hurricane", Type:"word", Correct_response:"0", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">flaw</p>", Item:"flaw", Type:"word", Correct_response:"0", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">alberation</p>", Item:"alberation", Type:"nonword", Correct_response:"1", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">unkempt</p>", Item:"unkempt", Type:"word", Correct_response:"0", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">breeding</p>", Item:"breeding", Type:"word", Correct_response:"0", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">festivity</p>", Item:"festivity", Type:"word", Correct_response:"0", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">screech</p>", Item:"screech", Type:"word", Correct_response:"0", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">savoury</p>", Item:"savoury", Type:"word", Correct_response:"0", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">plaudate</p>", Item:"plaudate", Type:"nonword", Correct_response:"1", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">shin</p>", Item:"shin", Type:"word", Correct_response:"0", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">fluid</p>", Item:"fluid", Type:"word", Correct_response:"0", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">spaunch</p>", Item:"spaunch", Type:"nonword", Correct_response:"1", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">allied</p>", Item:"allied", Type:"word", Correct_response:"0", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">slain</p>", Item:"slain", Type:"word", Correct_response:"0", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">recipient</p>", Item:"recipient", Type:"word", Correct_response:"0", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">exprate</p>", Item:"exprate", Type:"nonword", Correct_response:"1", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">eloquence</p>", Item:"eloquence", Type:"word", Correct_response:"0", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">cleanliness</p>", Item:"cleanliness", Type:"word", Correct_response:"0", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">dispatch</p>", Item:"dispatch", Type:"word", Correct_response:"0", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">rebondicate</p>", Item:"rebondicate", Type:"nonword", Correct_response:"1", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">ingenious</p>", Item:"ingenious", Type:"word", Correct_response:"0", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">bewitch</p>", Item:"bewitch", Type:"word", Correct_response:"0", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">skave</p>", Item:"skave", Type:"nonword", Correct_response:"1", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">plaintively</p>", Item:"plaintively", Type:"word", Correct_response:"0", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">kilp</p>", Item:"kilp", Type:"nonword", Correct_response:"1", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">interfate</p>", Item:"interfate", Type:"nonword", Correct_response:"1", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">hasty</p>", Item:"hasty", Type:"word", Correct_response:"0", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">lengthy</p>", Item:"lengthy", Type:"word", Correct_response:"0", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">fray</p>", Item:"fray", Type:"word", Correct_response:"0", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">crumper</p>", Item:"crumper", Type:"nonword", Correct_response:"1", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">upkeep</p>", Item:"upkeep", Type:"word", Correct_response:"0", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">majestic</p>", Item:"majestic", Type:"word", Correct_response:"0", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">magrity</p>", Item:"magrity", Type:"nonword", Correct_response:"1", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">nourishment</p>", Item:"nourishment", Type:"word", Correct_response:"0", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">abergy</p>", Item:"abergy", Type:"nonword", Correct_response:"1", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">proom</p>", Item:"proom", Type:"nonword", Correct_response:"1", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">turmoil</p>", Item:"turmoil", Type:"word", Correct_response:"0", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">carbohydrate</p>", Item:"carbohydrate", Type:"word", Correct_response:"0", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">scholar</p>", Item:"scholar", Type:"word", Correct_response:"0", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">turtle</p>", Item:"turtle", Type:"word", Correct_response:"0", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">fellick</p>", Item:"fellick", Type:"nonword", Correct_response:"1", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">destription</p>", Item:"destription", Type:"nonword", Correct_response:"1", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">cylinder</p>", Item:"cylinder", Type:"word", Correct_response:"0", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">censorship</p>", Item:"censorship", Type:"word", Correct_response:"0", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">celestial</p>", Item:"celestial", Type:"word", Correct_response:"0", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">rascal</p>", Item:"rascal", Type:"word", Correct_response:"0", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">purrage</p>", Item:"purrage", Type:"nonword", Correct_response:"1", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">pulsh</p>", Item:"pulsh", Type:"nonword", Correct_response:"1", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">muddy</p>", Item:"muddy", Type:"word", Correct_response:"0", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">quirty</p>", Item:"quirty", Type:"nonword", Correct_response:"1", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">pudour</p>", Item:"pudour", Type:"nonword", Correct_response:"1", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">listless</p>", Item:"listless", Type:"word", Correct_response:"0", Task:"LEX"},
+{Stimulus:"<p style=\"font-size: 48px;\">wrought</p>", Item:"wrought", Type:"word", Correct_response:"0", Task:"LEX"}
+
+    ];
+
+    //Instruction page for LexTALE
+    const lex_instructions = {
+      type: 'instructions',
+      show_clickable_nav: true,
+      //button_label_previous: 'Previous',
+      button_label_next: 'Ready to start',
+      pages: ['<div style="margin: 25px 200px 25px 200px; text-align: left">' +
+      '<p><strong>Instructions:</strong> </p>' +
+      '<p> This is the start of a short English lexical test. It is adapted from Lexical Test for Advanced Learners of English (Lemhöfer & Broersma, 2012).</p>' +
+      '<p>The test consists of about 60 trials, in each of which you will see a string of letters. Your task is to decide <strong>whether this is an existing English word or not</strong>. If you think it is an <strong>existing English word</strong>, you click on <strong>"yes"</strong>, and if you think it is <strong>not</strong> an existing English word, you click on <strong>"no"</strong>. </p>' +
+      '<p>If you are sure that the word exists, <strong>even though you don’t know its exact meaning</strong>, you may still respond "yes". But if you are not sure if it is an existing word, you should respond "no".</p>' +
+      '<p>In this test, we use British English rather than American English spelling. For example: "realise" instead of "realize"; "colour" instead of "color", and so on. Please don’t let this confuse you. This experiment is not about detecting such subtle spelling differences anyway.</p>' +
+      '<p>You have as much time as you like for each decision. The test will take about 5 minutes in total.</p>' +
+      '<p>You can start the test by pressing the button <strong>"Ready to start"</strong>. </p>' +
+      '<br>' +
+      '<p>这一部分是一个英语词汇小测试。测试改编自 Lexical Test for Advanced Learners of English (Lemhöfer & Broersma, 2012)。</p>' +
+      '<p>该测试包括大约60道题，在每一道题中您都会看到一串字母。您的任务是判断<strong>这是否是一个存在的英文单词</strong>。如果您认为它是<strong>存在的英文单词</strong>，请点击<strong>“yes”</strong>，如果您认为它<strong>不是</strong>现有的英文单词，您点击<strong>“no”</strong>。 </p>' +
+      '<p>如果您确定该词存在，<strong>即使您不知道它的确切含义</strong>，您仍然可以回答“yes”。但是如果您不确定它是否是一个已经存在的词，您应该回答“no”。</p>' +
+      '<p>在这个测试中，我们使用英式英语而不是美式英语拼写。例如：“realise”而不是“realize”； “colour”而不是“color”，等等。请不要因此感到困惑。这项测试并不是要检测这种细微的拼写差异。</p>' +
+      '<p>您可以用足够多的时间完成每道题目。测试总共大约需要5分钟。</p>' +
+      '<p>您可以通过按下按钮<strong>“Ready to start”</strong>来开始测试。 </p>' +
+
+      '</div>'
+    ],
+      on_finish: () => {
+          progress += 1;
+          jsPsych.setProgressBar(progress/total);
+      }
+    };
+    //timeline.push(lex_instructions);
+
+    const LEX_test = {
+      type: 'html-button-response',
+      stimulus: jsPsych.timelineVariable('Stimulus'),
+      choices: ['yes', 'no'],
+      //prompt: "<p> </p>",
+      data: {
+      'item': jsPsych.timelineVariable('Item'),
+      'trialtype': jsPsych.timelineVariable('Type'),
+      'correct_response': jsPsych.timelineVariable('Correct_response'),
+      'task': jsPsych.timelineVariable('Task')
+    },
+      on_finish: () => {
+          progress += 1;
+          jsPsych.setProgressBar(progress/total);
+      }
+    };
+
+    //inter-trial interval
+    var LEX_iti = {
+        type: 'html-keyboard-response',
+        stimulus: '',
+        choices: jsPsych.NO_KEYS,
+        trial_duration: 500
+    };
+
+    const LEX_procedure = {
+      timeline: [LEX_test, LEX_iti],
+      timeline_variables: LEX_stimuli,
+      repetitions: 1,
+      randomize_order: false
+    };
+    //timeline.push(LEX_procedure);
+
+    //LEX ending
+    const LEX_ending = {
+      type: 'instructions',
+      show_clickable_nav: true,
+      //button_label_previous: 'Previous',
+      button_label_next: 'Next',
+      pages: ['<div style="margin: 25px 200px 25px 200px; text-align: center">' +
+      '<p>This is the end of the lexical test. </p>' +
+      '<p>The next part will be a second perception experiment. </p>' +
+      '<p>Press the button <strong>"Next"</strong> to start the experiment.</p>' +
+      '<br>' +
+      '<p>单词测试到此结束。 </p>' +
+      '<p>下一部分将是第二个感知实验。 </p>' +
+      '<p>请点击<strong>“Next”</strong>开始实验。</p>' +
+      '</div>'
+    ],
+      on_finish: () => {
+          progress += 1;
+          jsPsych.setProgressBar(progress/total);
+      }
+    };
+    //timeline.push(LEX_ending);
+
+  /* Similarity rating test */
+
+    const SR_practice_stimuli = [
+      {Stimulus:"l2_acq_files/audio/is_ish_500.wav", Item:"is_ish", Type:"practice", Condition:"cons", Order:"1", Task:"SR_practice"},
+      {Stimulus:"l2_acq_files/audio/is_is_500.wav", Item:"is_is", Type:"practice", Condition:"cons", Order:"1", Task:"SR_practice"},
+      {Stimulus:"l2_acq_files/audio/ish_us_500.wav", Item:"ish_us", Type:"practice", Condition:"cons", Order:"1", Task:"SR_practice"},
+      {Stimulus:"l2_acq_files/audio/ish_is_500.wav", Item:"ish_is", Type:"practice", Condition:"cons", Order:"1", Task:"SR_practice"}
+    ];
+
+
+
+    const SR_stimuli = [
+
+      {Stimulus:"l2_acq_files/audio/aem_aen_500.wav", Item:"aem_aen", Type:"critical", Condition:"nasal", Order:"1", Task:"SR"},
+      {Stimulus:"l2_acq_files/audio/aem_aeng_500.wav", Item:"aem_aeng", Type:"critical", Condition:"nasal", Order:"1", Task:"SR"},
+      {Stimulus:"l2_acq_files/audio/aeng_aen_500.wav", Item:"aeng_aen", Type:"critical", Condition:"nasal", Order:"1", Task:"SR"},
+      {Stimulus:"l2_acq_files/audio/am_an_500.wav", Item:"am_an", Type:"critical", Condition:"nasal", Order:"1", Task:"SR"},
+      {Stimulus:"l2_acq_files/audio/am_ang_500.wav", Item:"am_ang", Type:"critical", Condition:"nasal", Order:"1", Task:"SR"},
+      {Stimulus:"l2_acq_files/audio/an_ang_500.wav", Item:"an_ang", Type:"critical", Condition:"nasal", Order:"1", Task:"SR"},
+      {Stimulus:"l2_acq_files/audio/aem_am_500.wav", Item:"aem_am", Type:"critical", Condition:"vowel", Order:"1", Task:"SR"},
+      {Stimulus:"l2_acq_files/audio/an_aen_500.wav", Item:"an_aen", Type:"critical", Condition:"vowel", Order:"1", Task:"SR"},
+      {Stimulus:"l2_acq_files/audio/aeng_ang_500.wav", Item:"aeng_ang", Type:"critical", Condition:"vowel", Order:"1", Task:"SR"},
+      {Stimulus:"l2_acq_files/audio/aen_aem_500.wav", Item:"aen_aem", Type:"critical", Condition:"nasal", Order:"2", Task:"SR"},
+      {Stimulus:"l2_acq_files/audio/aeng_aem_500.wav", Item:"aeng_aem", Type:"critical", Condition:"nasal", Order:"2", Task:"SR"},
+      {Stimulus:"l2_acq_files/audio/aen_aeng_500.wav", Item:"aen_aeng", Type:"critical", Condition:"nasal", Order:"2", Task:"SR"},
+      {Stimulus:"l2_acq_files/audio/an_am_500.wav", Item:"an_am", Type:"critical", Condition:"nasal", Order:"2", Task:"SR"},
+      {Stimulus:"l2_acq_files/audio/ang_am_500.wav", Item:"ang_am", Type:"critical", Condition:"nasal", Order:"2", Task:"SR"},
+      {Stimulus:"l2_acq_files/audio/ang_an_500.wav", Item:"ang_an", Type:"critical", Condition:"nasal", Order:"2", Task:"SR"},
+      {Stimulus:"l2_acq_files/audio/am_aem_500.wav", Item:"am_aem", Type:"critical", Condition:"vowel", Order:"2", Task:"SR"},
+      {Stimulus:"l2_acq_files/audio/aen_an_500.wav", Item:"aen_an", Type:"critical", Condition:"vowel", Order:"2", Task:"SR"},
+      {Stimulus:"l2_acq_files/audio/ang_aeng_500.wav", Item:"ang_aeng", Type:"critical", Condition:"vowel", Order:"2", Task:"SR"},
+      {Stimulus:"l2_acq_files/audio/aem_aem_500.wav", Item:"aem_aem", Type:"same", Condition:"same", Order:"1", Task:"SR"},
+      {Stimulus:"l2_acq_files/audio/aen_aen_500.wav", Item:"aen_aen", Type:"same", Condition:"same", Order:"1", Task:"SR"},
+      {Stimulus:"l2_acq_files/audio/aeng_aeng_500.wav", Item:"aeng_aeng", Type:"same", Condition:"same", Order:"1", Task:"SR"},
+      {Stimulus:"l2_acq_files/audio/am_am_500.wav", Item:"am_am", Type:"same", Condition:"same", Order:"1", Task:"SR"},
+      {Stimulus:"l2_acq_files/audio/an_an_500.wav", Item:"an_an", Type:"same", Condition:"same", Order:"1", Task:"SR"},
+      {Stimulus:"l2_acq_files/audio/ang_ang_500.wav", Item:"ang_ang", Type:"same", Condition:"same", Order:"1", Task:"SR"},
+      {Stimulus:"l2_acq_files/audio/aem_an_500.wav", Item:"aem_an", Type:"non-critical", Condition:"vowelnasal", Order:"1", Task:"SR"},
+      {Stimulus:"l2_acq_files/audio/aem_ang_500.wav", Item:"aem_ang", Type:"non-critical", Condition:"vowelnasal", Order:"1", Task:"SR"},
+      {Stimulus:"l2_acq_files/audio/am_aen_500.wav", Item:"am_aen", Type:"non-critical", Condition:"vowelnasal", Order:"1", Task:"SR"},
+      {Stimulus:"l2_acq_files/audio/aen_ang_500.wav", Item:"aen_ang", Type:"non-critical", Condition:"vowelnasal", Order:"1", Task:"SR"},
+      {Stimulus:"l2_acq_files/audio/am_aeng_500.wav", Item:"am_aeng", Type:"non-critical", Condition:"vowelnasal", Order:"1", Task:"SR"},
+      {Stimulus:"l2_acq_files/audio/aeng_an_500.wav", Item:"aeng_an", Type:"non-critical", Condition:"vowelnasal", Order:"1", Task:"SR"},
+      {Stimulus:"l2_acq_files/audio/aen_am_500.wav", Item:"aen_am", Type:"non-critical", Condition:"vowelnasal", Order:"2", Task:"SR"},
+      {Stimulus:"l2_acq_files/audio/aeng_am_500.wav", Item:"aeng_am", Type:"non-critical", Condition:"vowelnasal", Order:"2", Task:"SR"},
+      {Stimulus:"l2_acq_files/audio/an_aem_500.wav", Item:"an_aem", Type:"non-critical", Condition:"vowelnasal", Order:"2", Task:"SR"},
+      {Stimulus:"l2_acq_files/audio/an_aeng_500.wav", Item:"an_aeng", Type:"non-critical", Condition:"vowelnasal", Order:"2", Task:"SR"},
+      {Stimulus:"l2_acq_files/audio/ang_aem_500.wav", Item:"ang_aem", Type:"non-critical", Condition:"vowelnasal", Order:"2", Task:"SR"},
+      {Stimulus:"l2_acq_files/audio/ang_aen_500.wav", Item:"ang_aen", Type:"non-critical", Condition:"vowelnasal", Order:"2", Task:"SR"}
+
+    ];
+
+    const SR_instructions = {
+      type: 'instructions',
+      show_clickable_nav: true,
+      button_label_previous: 'Previous',
+      button_label_next: 'Ready to start',
+      pages: ['<div style="margin: 25px 200px 25px 200px; text-align: center">' +
+      '<p>Before the start of the experiment, you will have some practive first. </p>' +
+      '<p>On each trial, you will hear two sounds in a sequence.</p>' +
+      '<p>Please rate how <strong>similar</strong> the two sounds are on a scale of <strong>1</strong> to <strong>5</strong> ("1" = "very different"，"5" = "very similar") by pressing the button on the screen.</p>' +
+      '<br>' +
+      '<p>在实验开始之前，您将进行一些练习。</p>' +
+      '<p>在每次试验中，您会依次听到两个声音。</p>' +
+      '<p>请通过屏幕上的按钮，按<strong>1</strong>到<strong>5</strong>分评估这两个声音的<strong>相似程度</strong>（"1" = "非常不同"，"5" = "非常相似")。</p>' +
+      '</div>'
+    ],
+      on_finish: () => {
+          progress += 1;
+          jsPsych.setProgressBar(progress/total);
+      }
+    };
+    //timeline.push(SR_instructions);
+
+    //inter-trial interval
+    var iti = {
+        type: 'html-keyboard-response',
+        stimulus: '',
+        choices: jsPsych.NO_KEYS,
+        trial_duration: 1500
+    };
+
+    const SR_test = {
+      type: 'audio-button-response',
+      stimulus: jsPsych.timelineVariable('Stimulus'),
+      choices: ['1', '2', '3', '4', '5'],
+      prompt: "<p>How similar the two sounds are? Rate the similarity on a scale of 1 to 5 ('1' = 'very different', '5' = 'very similar'). </p>" +
+      '<br>' +
+      "<p>这两个声音有多相似？请按1到5分评估相似程度（'1' = '非常不同'，'5' = '非常相似'）。 </p>",
+      trial_duration: 7500,
+      data: {
+      'audio': jsPsych.timelineVariable('Stimulus'),
+      'item': jsPsych.timelineVariable('Item'),
+      'trialtype': jsPsych.timelineVariable('Type'),
+      'condition': jsPsych.timelineVariable('Condition'),
+      'order': jsPsych.timelineVariable('Order'),
+      'task': jsPsych.timelineVariable('Task')
+    },
+      on_finish: () => {
+          progress += 1;
+          jsPsych.setProgressBar(progress/total);
+      }
+    };
+
+    //add breaks for the whole SR task
+    var trial_count_sr = 0;
+
+    var break_trial_sr = {
+  type: 'html-keyboard-response',
+  stimulus:  "<p style='font-size: 25px'>Time to take a break!</p>" +
+          "<p style='font-size: 25px'>Take a rest for about a minute. Then, Continue by pressing 'c' on your keyboard. </p>" +
+          '<br>'+
+          "<p style='font-size: 25px'>是时候休息一下了!</p>" +
+          "<p style='font-size: 25px'>请休息一分钟左右。然后，按键盘上的“c”键继续。</p>",
+
+  choices: "c"
+};
+
+var break_conditional_sr = {
+  timeline: [break_trial_sr],
+  conditional_function: function() {
+    // increment trial count - in first run through the timeline variables procedure, trial_count will be equal to 1
+    trial_count_sr++;
+    if (trial_count_sr % 55 == 0) {
+      // if the trial count is divisible by 96, then run the break trial
+      return true;
+    } else {
+      // otherwise skip the break trial
+      return false;
+    }
+  }
+};
+
+    //push the practice block
+    const SR_practice_procedure = {
+      timeline: [SR_test, iti],
+      timeline_variables: SR_practice_stimuli,
+      repetitions: 1,
+      randomize_order: false
+    };
+    //timeline.push(SR_practice_procedure);
+
+    //instruction page before the real SR experiment
+    const SR_proceedtest = {
+      type: 'instructions',
+      show_clickable_nav: true,
+      button_label_previous: 'Previous',
+      button_label_next: 'Ready to start',
+      pages: ['<div style="margin: 25px 200px 25px 200px; text-align: center">' +
+      '<p>That was practice! Now you can start the experiment. Remember: </p>' +
+      '<p>Please rate how <strong>similar</strong> the two sounds are on a scale of <strong>1</strong> to <strong>5</strong> ("5" = "very similar", "1" = "very different") by pressing the button on the screen.</p>' +
+      '<p>There will be a break in the middle of the experiment.</p>' +
+      '<p>以上是练习部分。现在您可以开始实验了。记住：</p>' +
+      '<p>请通过屏幕上的按钮，按<strong>1</strong>到<strong>5</strong>级评估两个声音的<strong>相似程度</strong>（“5”=“非常相似”， "1" = "非常不同")。</p>' +
+      '<p>实验中途会有一次休息机会。</p>' +
+      '</div>'
+    ],
+      on_finish: () => {
+          progress += 1;
+          jsPsych.setProgressBar(progress/total);
+      }
+    };
+    //timeline.push(SR_proceedtest);
+
+    const SR_procedure = {
+      timeline: [break_conditional_sr, SR_test, iti],
+      timeline_variables: SR_stimuli,
+      repetitions: 3,
+      randomize_order: true
+    };
+    //timeline.push(SR_procedure);
+
+
+    function saveData(name, data){
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', 'l2_acq_files/write_data.php'); // 'write_data.php' is the path to the php file described above.
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.send(JSON.stringify({filename: name, filedata: data}));
+    }
+
+    /* save results */
+    const save_data = {
+        type: 'call-function',
+        func: function () {
+            jsPsych.data.addProperties({
+                participant_id: participant_id
+            });
+            saveData(String(participant_id), jsPsych.data.get().csv());
+            console.log('Results saved');
+        }
+    };
+    //timeline.push(save_data);
+
+    /* Qualtrics qnaires */
+    const BLP_instructions = {
+        type: 'instructions',
+        show_clickable_nav: true,
+        button_label_next: 'Next',
+        pages: [
+            //P1
+            // middle two sentences have been moved from here, to the end of part 2 (M-E's Qualtrics)
+            '<div style="margin: 25px 200px 25px 200px; text-align: center">' +
+                '<p>This is the end of the perception experiment.</p>' +
+                '<p>The last part of the study is a survey about your language background.</p>' +
+                '<p>Please click <strong>Next</strong> to start the survey.</p>' +
+                '<br>' +
+                '<p>感知实验到此结束。</p>' +
+                '<p>研究的最后一部分是关于你的语言背景的调查问卷。</p>' +
+                '<p>请点击<strong>"Next"</strong>开始问卷。</p>' +
+                '</div>'
+        ],
+        on_finish: () => {
+            progress += 1;
+            jsPsych.setProgressBar(progress/total);
+            // M-E's actual Qualtrics url
+            //"https://ubc.ca1.qualtrics.com/jfe/form/SV_3CaF6GpHA6SDRye?pid="+participant_id;
+            window.location = "https://ubc.ca1.qualtrics.com/jfe/form/SV_8BAu8xoDzTp1kRE?pid="+participant_id;
+        }
+    };
+    //timeline.push(BLP_instructions);
+
+    // a block to put their email?
+    const final_page = {
+      type: 'instructions',
+      show_clickable_nav: false,
+      pages: ['<div style="margin: 25px 200px 25px 200px; text-align: center">' +
+      '<p>This is the end of the experiment. Thank you for your participation! </p>' +
+      '<br>' +
+      '<p>研究到此结束。感谢您的参与！ </p>' +
+      '</div>'
+    ],
+      on_finish: () => {
+          progress += 1;
+          jsPsych.setProgressBar(progress/total);
+      }
+    };
+    //timeline.push(final_page);
+
+    //randomize the order of AX and SR task
+    var order = jsPsych.randomization.sampleWithoutReplacement(['AX', 'SR'], 2);
+
+    if (order[0] === 'AX') {
+      timeline = [
+        welcome,
+        consent,
+        volume_check,
+        headphone_check,
+        pass_check,
+        passed_headphone_check,
+        AX_instructions,
+        AX_practice_block,
+        AX_proceedtest,
+        AX_vowel_block,
+        AX_nasal_block,
+        AX_VN_block,
+        AX_ending,
+        lex_instructions,
+        LEX_procedure,
+        LEX_ending,
+        SR_instructions,
+        SR_practice_procedure,
+        SR_proceedtest,
+        SR_procedure,
+        save_data,
+        BLP_instructions
+      ]
+    } else {
+      timeline = [
+        welcome,
+        consent,
+        volume_check,
+        headphone_check,
+        pass_check,
+        passed_headphone_check,
+        SR_instructions,
+        SR_practice_procedure,
+        SR_proceedtest,
+        SR_procedure,
+        lex_instructions,
+        LEX_procedure,
+        LEX_ending,
+        AX_instructions,
+        AX_practice_block,
+        AX_proceedtest,
+        AX_vowel_block,
+        AX_nasal_block,
+        AX_VN_block,
+        AX_ending,
+        save_data,
+        BLP_instructions
+
+      ]
+    }
+
+    // This section added in to produce an informative message once the study closes
+    var rightnow = new Date();
+    var studyclosed = new Date('October 4, 2023 20:30:00');
+    if (rightnow.getTime() < studyclosed.getTime()) {
+      /* start the experiment */
+      jsPsych.init({
+          timeline: timeline,
+          message_progress_bar: 'Progress',
+          preload_audio: audio,
+          show_progress_bar: true,
+          auto_update_progress_bar: true,
+          //on_finish: function () {
+              // Uncomment next line to see JSON data on the screen
+              //jsPsych.data.displayData()
+
+          //},
+          on_close: () => {
+              jsPsych.data.addProperties({
+                  participant_id: participant_id,
+                  timestamp: timestamp
+              });
+              saveData(String(participant_id) + '_incomplete', jsPsych.data.get().csv());
+          }
+      });
+    } else {
+      const closed_message = {
+          type: 'instructions',
+          show_clickable_nav: false,
+          pages: [
+              '<div style="margin: 25px 200px 25px 200px; text-align: justify">' +
+              '<p>This is the end of the study. Thank you for your participation! </p>' +
+              '<br>' +
+              '<p>研究到此结束。感谢您的参与！ </p>' +
+              '</div>'
+          ],
+      };
+      var closed_timeline = [closed_message];
+      jsPsych.init({timeline: closed_timeline});
+    }
+
+
+</script>
+</body>
+</html>
