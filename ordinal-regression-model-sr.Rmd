@@ -1,0 +1,473 @@
+---
+title: "Perceived similarity ratings of English low vowel nasal sequences by Mandarin listeners: A Ordinal regression analysis"
+author: "Sijia Zhang"
+date: "11/22/2022"
+output:
+  pdf_document:
+    latex_engine: xelatex
+  html_document: default
+  bookdown::pdf_document2:
+    includes:
+      in_header: header.tex
+---
+
+```{r setup, include=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+
+## Description of the data
+
+The current data set was collected through an online experiment, where listeners hear pairs of English low vowel + nasal sounds, and were asked to rate how similar they found the two sounds are on a scale of 1 - 5 (1 = "very different", 5 = "very similar"). The rating data collected from three groups of listeners will be compared: L1 Mandarin listeners who are living in China, L1 Mandarin listeners who are living in Canada, and L1 English listeners in Canada as the control group. 
+
+The low vowel + nasal sounds tested in the current study are low front or low back vowel followed by a labial nasal, alveolar nasal, or a velar nasal, recorded by a L1 speaker of North American variety of English. There are three types of trials: critical, non-critical, and same. Critical trials include item pairs that differ either in the vowel or the nasal (e.g., [æm] vs. [æn]). Non-critical trials include pairs that differ both in the vowel or the nasal (e.g., [æm] vs. [aŋ], "a" is used to represent the low back vowel in English). And the same trials include two physically identical items ([æm] vs. [æm]). The critical trials are the main interest of the study. For the critical trials, two conditions are coded: nasal (pairs that the nasals differ) and vowel (pairs that the vowels differ). Each item pair repeated 3 times in the experiment with a randomized order. The order of which of the two item in each pair appear first is coded as 1 or 2. 
+
+## Research questions and hypotheses
+1. Effect of listener groups: Do the three groups of listeners differ in perceived similarity of those VN sequences in the critical trials? 
+Coda [m] does not exist in Mandarin. Low vowel and nasal must agree in their backness in Mandarin. Therefore, L1 Mandarin listeners may perceive the non-native VN contrasts differently in terms of their degrees of similarity than the English listeners. The amount or frequency of exposure to L2 English may also have an effect on their perception.
+The first goal of this report is to explore whether L1 language background (English vs. Mandarin) and L2 exposure (Mandarin listeners in Canada vs. in China) play roles in the similarity perception of English low vowel nasal sequences.
+
+2. Effects of nasal vs. vowel cues: Do listeners perceive higher similarity when nasal differs than vowel differs (i.e., do vowel cues more salient than nasal cues)? 
+The second goal is to test the hypothesis that listeners will perceive higher similarity when nasal differs than vowel differs.
+
+3. Interaction effects: Do the effects of nasal vs. vowel vary across three listener groups?
+The third goal is to test whether the perceived similarity difference between nasal-differed condition and vowel-differed condition vary among the three groups.
+
+
+## Loading packages and data
+
+First of all, I import all the packages and data sets that I need for the analysis, as well as combine the data sets from all the participants into one large data frame. (The codes for loading individual data sets and combining them using bind_rows() are not presented in the pdf due to the space limit, so please see the codes in the .rmd file)
+```{r, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(ggbeeswarm)
+library(brms)
+library(bayesplot)
+```
+
+```{r, message=FALSE, show_col_type = FALSE, include=FALSE}
+ eng1 <- read_csv("ENG/25159_9m0zb0z1we.csv")
+ eng2 <- read_csv("ENG/27418_1apqjv1aj0.csv")
+ eng3 <- read_csv("ENG/27778_jfz8btxacp.csv")
+ eng4 <- read_csv("ENG/27808_o1u4gaesp7.csv")
+ eng5 <- read_csv("ENG/28279_w5uaxb3ndg.csv")
+ eng6 <- read_csv("ENG/30733_t1s4alzb33.csv")
+ eng7 <- read_csv("ENG/30880_8vvwqs01vn.csv")
+ eng8 <- read_csv("ENG/31576_p3gpyp7w51.csv")
+ eng9 <- read_csv("ENG/31579_gnex8ob5q2.csv")
+ eng10 <- read_csv("ENG/31678_dew6mgcw9h.csv")
+ eng11 <- read_csv("ENG/32380_d6aq64e1rr.csv")
+ eng12 <- read_csv("ENG/32386_nz2wcdjxag.csv")
+ eng13 <- read_csv("ENG/32524_wqb08p8a6p.csv")
+ eng14 <- read_csv("ENG/33271_4bwzlpcm5v.csv")
+ eng15 <- read_csv("ENG/35266_xvapk19vbt.csv")
+ eng16 <- read_csv("ENG/35296_xrd8otldvo.csv")
+ eng17 <- read_csv("ENG/35776_r9a4htwe0j.csv")
+ eng18 <- read_csv("ENG/35983_qv3s1xuccf.csv")
+ eng19 <- read_csv("ENG/36070_f58d8s6715.csv")
+ eng20 <- read_csv("ENG/35605_wu7ru7tvxu.csv")
+ eng21 <- read_csv("ENG/32119_czbetg9gnu.csv")
+eng22 <- read_csv("ENG/33109_pgjw6l686g.csv")
+eng23 <- read_csv("ENG/35656_2jdu6d0keg.csv")
+eng24 <- read_csv("ENG/31912_mwrfn66y0f.csv")
+eng25 <- read_csv("ENG/31687_62rtdxj96q.csv")
+eng26 <- read_csv("ENG/35812_k14oc707y8.csv")
+
+#  
+mcan1 <- read_csv("MAN-CAN/4qz3s4y9xg.csv")
+mcan2 <- read_csv("MAN-CAN/6b8omy3pe3.csv")
+mcan3 <- read_csv("MAN-CAN/8vlqzuda5n.csv")
+mcan4 <- read_csv("MAN-CAN/9h99lvod08.csv")
+mcan5 <- read_csv("MAN-CAN/amkm1vepn0.csv")
+mcan6 <- read_csv("MAN-CAN/eqmt1ql31z.csv")
+mcan7 <- read_csv("MAN-CAN/jn7cl8be81.csv")
+mcan8 <- read_csv("MAN-CAN/n13c8bk58x.csv")
+mcan9 <- read_csv("MAN-CAN/prsbdehryb.csv")
+mcan10 <- read_csv("MAN-CAN/wmtjpw2xv0.csv")
+mcan11 <- read_csv("MAN-CAN/z9rxbgy4c8.csv")
+mcan12 <- read_csv("MAN-CAN/z95vw3kgmw.csv")
+mcan13 <- read_csv("MAN-CAN/vndnfqwwxl.csv")
+mcan14 <- read_csv("MAN-CAN/511drc7kot.csv")
+mcan15 <- read_csv("MAN-CAN/cvekn73qh6.csv")
+mcan16 <- read_csv("MAN-CAN/n8roxqfk6p.csv")
+mcan17 <- read_csv("MAN-CAN/aur2goyl3j.csv")
+mcan18 <- read_csv("MAN-CAN/018971bkj6.csv")
+mcan19 <- read_csv("MAN-CAN/c5413zxgy6.csv")
+mcan20 <- read_csv("MAN-CAN/xp01j7d2us.csv")
+mcan21 <- read_csv("MAN-CAN/odhk5vuebl.csv")
+mcan22 <- read_csv("MAN-CAN/ro9q66nrkj.csv")
+mcan23 <- read_csv("MAN-CAN/p77kn09upd.csv")
+mcan24 <- read_csv("MAN-CAN/wbpvovfkvo.csv")
+mcan25 <- read_csv("MAN-CAN/3x8ymlhlm5.csv")
+mcan26 <- read_csv("MAN-CAN/ljqjc288yh.csv")
+
+mchi1 <- read_csv("MAN-CHI/3g1lhwud4m.csv")
+mchi2 <- read_csv("MAN-CHI/05d0uoz6j5.csv")
+mchi3 <- read_csv("MAN-CHI/27v9oasvn0.csv")
+mchi4 <- read_csv("MAN-CHI/29xc1sdjv4.csv")
+mchi5 <- read_csv("MAN-CHI/d2evwavojm.csv")
+mchi6 <- read_csv("MAN-CHI/dqyq8f35ab.csv")
+mchi7 <- read_csv("MAN-CHI/nuu6yea8xz.csv")
+mchi8 <- read_csv("MAN-CHI/oubhb3ky31.csv")
+mchi9 <- read_csv("MAN-CHI/sbupwd66k1.csv")
+mchi10 <- read_csv("MAN-CHI/sg68d9g015.csv")
+mchi11 <- read_csv("MAN-CHI/x2xd5rr7aw.csv")
+mchi12 <- read_csv("MAN-CHI/wh7hmtf51q.csv")
+mchi13 <- read_csv("MAN-CHI/nrvwntwmn6.csv")
+mchi14 <- read_csv("MAN-CHI/jnuxl006d0.csv")
+mchi15 <- read_csv("MAN-CHI/8oxwjzqu3f.csv")
+mchi16 <- read_csv("MAN-CHI/pqqu7vbqym.csv")
+mchi17 <- read_csv("MAN-CHI/jg3sl20wvy.csv")
+mchi18 <- read_csv("MAN-CHI/6pnb6vt1nt.csv")
+mchi19 <- read_csv("MAN-CHI/4sebeznyny.csv")
+mchi20 <- read_csv("MAN-CHI/emw96vwf5o.csv")
+mchi21 <- read_csv("MAN-CHI/mhxbhnbkkb.csv")
+mchi22 <- read_csv("MAN-CHI/r5aydcdprp.csv")
+mchi23 <- read_csv("MAN-CHI/oywe0kytgy.csv")
+mchi24 <- read_csv("MAN-CHI/jbk3v2n91b.csv")
+
+#convert the responses into the same format in order to combine them together
+eng16$button_pressed = as.character(eng16$button_pressed)
+eng20$button_pressed = as.character(eng20$button_pressed)
+mcan3$button_pressed = as.character(mcan3$button_pressed)
+mcan12$button_pressed = as.character(mcan12$button_pressed)
+mcan23$button_pressed = as.character(mcan12$button_pressed)
+mchi1$button_pressed = as.character(mchi1$button_pressed)
+mchi5$button_pressed = as.character(mchi5$button_pressed)
+mchi17$button_pressed = as.character(mchi5$button_pressed)
+eng25$button_pressed = as.character(eng25$button_pressed)
+mchi18$button_pressed = as.character(mchi18$button_pressed)
+mchi23$button_pressed = as.character(mchi23$button_pressed)
+mchi24$button_pressed = as.character(mchi24$button_pressed)
+```
+
+```{r, message=FALSE, show_col_type = FALSE, include=FALSE}
+#combine data sets from all the participants into one large set
+sr <- bind_rows(
+                eng1, eng2, eng3, eng4, eng5, eng6,eng7,eng8,eng9,eng10,
+                eng11,eng12,eng13,eng14,eng15,eng16,eng17,eng18,eng19,eng20,eng21,
+                  eng22, eng23, eng24, eng25, eng26,
+                 mcan1,mcan2, mcan3,
+                 mcan4, mcan5, mcan6, mcan7, mcan8, mcan9,
+                 mcan10, mcan11, mcan12, mcan13, mcan14, mcan15, mcan16, mcan17,
+                mcan18, mcan19, mcan20, mcan21, mcan22, mcan23,
+                mcan24, mcan25, mcan26,
+                mchi1, mchi2, mchi3, mchi4, mchi5, mchi6, mchi7, mchi8, mchi9,
+                mchi10, mchi11, mchi12, mchi13, mchi14, mchi15, mchi16, mchi17,
+                mchi18, mchi19, mchi20, mchi21, mchi22, mchi23, mchi24
+                )
+```
+## Data wrangling and clearning
+
+I now encode group information for each participant by adding a new column (based on their self-reported background questionnaire). "ENG" stands for the English control group, "MAN-CAN" represents Mandarin listeners who are in Canada, and "MAN-CHI" stands for Mandarin listeners in China.
+```{r, message=FALSE}
+# add group column
+sr <- sr %>%
+  mutate(group = case_when(
+         str_detect(participant_id, "_") ~ "ENG",
+         participant_id %in% c("4qz3s4y9xg", "6b8omy3pe3", "8vlqzuda5n", "9h99lvod08", "amkm1vepn0", "eqmt1ql31z","jn7cl8be81","n13c8bk58x", "prsbdehryb", "wmtjpw2xv0", "z9rxbgy4c8","z95vw3kgmw",
+"vndnfqwwxl", "511drc7kot", "cvekn73qh6", "n8roxqfk6p", "aur2goyl3j", "018971bkj6", "c5413zxgy6",
+"xp01j7d2us", "odhk5vuebl", "ro9q66nrkj", "p77kn09upd", "wbpvovfkvo", "3x8ymlhlm5", "ljqjc288yh"
+) 
+         ~ "MAN-CAN",
+         participant_id %in% c("3g1lhwud4m", "05d0uoz6j5", "27v9oasvn0",
+                               "29xc1sdjv4", "d2evwavojm", "dqyq8f35ab", "nuu6yea8xz", "oubhb3ky31", "sbupwd66k1", "sg68d9g015", "x2xd5rr7aw", "wh7hmtf51q", "nrvwntwmn6", "jnuxl006d0", "8oxwjzqu3f", "pqqu7vbqym", "jg3sl20wvy", "6pnb6vt1nt", "4sebeznyny", "emw96vwf5o", "mhxbhnbkkb", "r5aydcdprp", "oywe0kytgy", "jbk3v2n91b") 
+         ~ "MAN-CHI"
+         ))
+```
+I filter the responses for the rating task only, exclude data points with no responses, and convert the responses to a numeric variable instead of characters, from 1-5.
+```{r}
+#filter the responses for the rating task only
+sr <- sr %>%
+  filter(task == "SR") %>%
+  # exclude rows without responses
+  filter(!is.na(button_pressed)) %>%
+  filter(button_pressed!="null")
+
+#convert all responses into a numeric variable, from 1-5
+sr$button_pressed = as.numeric(sr$button_pressed)
+sr$button_pressed = sr$button_pressed +1
+#change the response column names to "rating"
+colnames(sr)[which(names(sr) == "button_pressed")] <- "rating"
+```
+
+```{r, message=FALSE, include=FALSE}
+sr_info <- sr %>%
+  group_by(participant_id, group) %>%
+  summarize() %>%
+  ungroup()
+n_eng = sum(sr_info$group == "ENG")
+n_mcan = sum(sr_info$group == "MAN-CAN")
+n_mchi = sum(sr_info$group == "MAN-CHI")
+```
+
+There are `r toString(n_eng)` English listeners, `r toString(n_mcan)` Mandarin listeners in Canada, and `r toString(n_mchi)` Mandarin listeners in China. (functions group_by(), summarize() and sum() are used, and codes are not presented due to space limit)
+
+```{r}
+sr_all <- sr %>%
+  #group by condition
+  group_by(trialtype, group) %>%
+  #summarize
+  #summarise(avg=mean(rating)) %>%
+  ungroup()
+```
+
+```{r}
+sr_all_mean <- sr_all %>%
+  #summarize the mean
+  group_by(trialtype, group) %>%
+  summarise(rating_mean = mean(rating),
+            rating_sd = sd(rating),
+            rating_se = sd(rating) / sqrt(length(rating))) %>%
+  ungroup()
+sr_all_mean
+```
+
+Here is a preliminary density plot of the distributions of the ratings for the three groups for each trial type.
+We can see that the general distribution among all three groups are in an expected direction, where the "same" trials have the highest scores (mostly around 4 and 5), and "non-critical" trials have the least rating scores (mostly below 3). Some variations occur for the "critical" trials (ranging from 1 to 4 mostly), but it looks like that English listeners have a bit higher rating scores than the two Mandarin groups.
+
+```{r}
+df$trialtype <- factor(df$trialtype, levels = c("critical", "non-critical", "same"), 
+                  labels = c("Critical", "Non-critical", "Same"))
+```
+
+```{r}
+trial.labs <- c("Critical", "Non-critical", "Same")
+names(trial.labs) <- c("Critical", "Non-critical","Same")
+
+ggplot (sr_all, aes(x = rating, fill = group, colour = group)) +
+  geom_histogram(position="dodge", binwidth = 0.3, alpha = 1) +
+  #geom_histogram(aes(y=..density..), colour="black", fill="white", position="dodge")+
+  facet_grid(~factor(trialtype, levels = c("non-critical", "critical", "same")), 
+             labeller = labeller(trialtype = trial.labs)) +
+  #facet_grid(~trialtype,
+             #labeller = labeller(trialtype = trial.labs)) +
+  theme_bw()+
+  theme(
+      strip.text.x = element_text(
+        size = 18, color = "black"),
+      axis.title = element_text(size = 20),
+      axis.text = element_text(size = 18),
+      legend.title=element_text(size=18), 
+      legend.text=element_text(size=18)
+      )+
+  geom_vline(data=sr_all_mean, aes(xintercept=rating_mean, colour = group),
+             linetype="dashed")+
+  scale_color_brewer(palette="Set2", labels = c("Eng", "Can-M", "Chi-M"), name="Group") +
+  scale_fill_brewer(palette="Set2", labels = c("Eng", "Can-M", "Chi-M"), name="Group") +
+  #scale_color_discrete(labels = c("Eng", "Can-M", "Chi-M")) +
+  xlab("Similarity rating score (1-5) by pair type") +
+  ylab("Count")
+
+#facet_grid(~factor(size, levels=c('50%','100%','150%','200%')))
+```
+
+
+The focus of the report is the pattern for the critical trials. So I now filter the trial type as "critical" only.
+```{r}
+sr_cru <- sr %>%
+  #filter critical items
+  filter(trialtype== "critical")
+```
+
+Here is a little summary of the mean and standard deviation of the ratings for critical trials, across groups and conditions.
+```{r}
+sr_cru_c <- sr_cru %>%
+  #group by conditions and groups
+  group_by(condition, group) %>%
+  #summarize
+  summarise(avg=mean(rating),
+            sd = sd(rating)) %>%
+  ungroup()
+sr_cru_c
+```
+
+Here is an another preliminary plot that shows the average rating score for the critical trials, comparing the nasal vs. vowel conditions for the three population groups. The error bar shows one standard deviation. The ratings for nasal-differed conditions are in general higher than vowel-differed conditions. English listeners seem to have higher ratings than the two Mandarin groups, and the difference is larger in the vowel condition. We can see from the size of the error bar that there are quite a bit variations from the mean for each group/condition. 
+```{r}
+ggplot(sr_cru_c, aes(x=factor(group, level = c('MAN-CHI', 'MAN-CAN', 'ENG')), y=avg, fill=group)) +
+  facet_grid(~condition)+
+  geom_bar(stat="identity") +
+  geom_errorbar(aes(x=group, ymin=avg - sd, ymax=avg+ sd),  width=0.2, alpha=0.5, size=0.5) +
+  theme_minimal()+
+  xlab("Speakers by condition")+
+  ylab("Average rating score")
+```
+
+## Ordinal regression (cumulative link) model
+In this section, I will adopt an ordinal regression model to analyze the Likert-scale rating data (1-5 represents "very different" to "very similar"). Compared to fitting a linear regression model that assumes the dependent variables are continuous, the ordinal regression takes into accounts that the distributions across ordinal categories are uneven, and it can generate predictions that fall within the response scale. Linear regression for ordinal data will assume a "theoretically incorrect outcomes", and can lead to "effect size estimates that are distorted in size or certainty" (Bürkner & Vuorre, 2019; Liddell & Kruschke, 2017).
+
+The cumulative link model captures the cumulative likelihood of responses that fall in a certain range of ordered response categories. In the ordered logistic regression model, each intercept coefficient represents the log odds of k categories over k-1 categories. I will now fit an ordered logistic regression in brms (Bayesian Regression Models using Stan) package (Bürkner, 2017, 2018) . 
+
+* Helmert coding: The helmert coding scheme adopted here for the dependent variable "group" compares the mean of each level to the mean of the subsequent levels. Specifically, English group is coded as level 1, Mandarin in Canada as level 2, and Mandarin in China as level 3. As later shown in the model summary, group.l1 indicates comparison between English and the mean of the two Mandarin groups, and group.l2 is the contrast between the means of the the two Mandarin groups. (All the other variables stay the default dummy coding.)
+```{r}
+#creating the factor variable group.l
+sr_cru$group.l = factor(sr_cru$group, labels=c("ENG", "MAN-CAN", "MAN-CHI"))
+my.helmert = matrix(c(2/3, -1/3, -1/3, 0, 1/2, -1/2), ncol = 2)
+#my.helmert
+#assigning the new helmert coding to group.l
+contrasts(sr_cru$group.l) = my.helmert
+```
+
+* Fitting an ordinal regression model in brms: The ordinal regression model fitted with brms has the outcome variable rating scores. The predictor variables are conditions (with two levels, nasal and vowel), group (three population levels with helmert coding), and their interaction, as well as a control variable order (randomly coded as "1" or "2" for the order of item in each pair). Random intercepts by item and by participant are included, as well as random slopes over group by item and over condition by participant. Random slopes over the control variable order is not included. The cumulative model is set to "logit", indicating an ordered logistic regression model, and the threshold is "flexible" by default without adding any further constrains to the intercepts. The default uninformative priors are used for the Bayesian model.
+
+```{r, message=FALSE, warning=FALSE}
+m1 <- brm(rating ~ condition * group.l + order + (1 + group.l|item) + (1 + condition|participant_id),
+          data=sr_cru, family=cumulative("logit", threshold="flexible"))
+```
+
+The trace plots show that the model converges quite well, where the trajectories of all the four chains mixed quite well. 
+```{r}
+mcmc_trace(m1, pars = vars(matches("^b")))
+```
+
+Model summary:
+```{r}
+# model summary
+summary(m1)
+```
+```{r}
+p_direction(m1)
+``` 
+
+```{r, message=FALSE, warning=FALSE}
+m2 <- brm(rating ~ group.l*condition + order + (1 + group.l|item) + (1 + condition|participant_id),
+          data=sr_cru, family=cumulative("logit", threshold="flexible"))
+```
+
+```{r}
+# model summary
+summary(m2)
+```
+```{r}
+p_direction(m2)
+``` 
+
+From the model summary, we can see that there is an effect of condition (b = -2.97, 95% CrI of [-3.76, -2.11]). Since 0 is outside this credible interval, there is strong evidence for this effect. The negative effect suggests that vowel has lower similarity rating than nasal (more detail below).
+
+However, there is no strong evidence for group effects in nasal condition. The contrast between English and the two Mandarin groups (group.l1) has little effect where b = 0.32 with 95% CrI of [-0.51, 1.33]. The contrast between the two Mandarin groups also has a slight effect where b = 0.28 with 95% CrI of [-0.62, 1.23]. Since 0 is included in both credible intervals, we do not have strong evidence for group effects.
+
+For the interaction effects between condition and group, we have strong evidence for a positive effect of condition comparing English listeners with Mandarin listeners (b = 1.54, 95% CrI = [0.55, 2.62]), suggesting that the condition effect positively increases for English group than Mandarin groups. Recall that the condition main effect is a negative value, this interaction effect indicates that the rating difference between nasal and vowel conditions is smaller for English group than Mandarin group (illustrated by figures below). However, we do not have strong evidence for an interaction effect between condition and the two Mandarin groups (b = -0.00, 95% CrI = [-1.17,1.18]). 
+
+To present some more interpretable results, I will generate the posterior predictions from the model:
+```{r}
+# create a dummy data set used for generate posterior predictions
+dummy_new <- tibble(condition=c("nasal", "nasal", "nasal", "vowel", "vowel", "vowel"), 
+                    group.l=c("ENG", "MAN-CAN", "MAN-CHI", "ENG", "MAN-CAN", "MAN-CHI"),
+                    item = c("am_aem", "am_aem", "am_aem","am_aem", "am_aem", "am_aem"),
+                    order = c(1, 1, 1, 1, 1, 1),
+                    participant_id = c("33109_pgjw6l686g", "33109_pgjw6l686g", "33109_pgjw6l686g", 
+                                       "33109_pgjw6l686g", "33109_pgjw6l686g", "33109_pgjw6l686g")
+                    )
+```
+
+Here is a plot that shows the predicted mean distributions for nasal-differed conditions for the three groups. Despite some overlap in their predicted mean distributions, we can see that the rating of English listeners is a bit higher than the Mandarin in Canada group, and both are higher than the Mandarin in China group. The difference in the average ratings among the three groups is not very large (they are all most likely to be rated as about 3 - 3.5), as suggested by the weak evidence from the model.
+```{r}
+#generate posterior probabilities
+p1 <- posterior_epred(m1, newdata = dummy_new, re_formula = NA)
+#p1
+#p1[,1,1:5]
+
+#Calculate the posterior mean predictions
+#English nasal
+means_n_eng <- p1[,1,1:5] %*% 1:5
+#Mandarin-CAN nasal
+means_n_mcan <- p1[,2,1:5] %*% 1:5
+#Mandarin-CHI nasal
+means_n_mchi <- p1[,3,1:5] %*% 1:5
+
+#plot the distribution of the predicted means
+mean_nas <- tibble(group=rep(c("ENG", "MAN-CAN", "MAN-CHI"), c(length(means_n_eng), length(means_n_mcan), length(means_n_mchi))),
+                  rating=c(means_n_eng, means_n_mcan, means_n_mchi),
+                  condition = "nasal"
+)
+
+ggplot(mean_nas, aes(x=rating, col=group)) +
+  geom_density(size = 1) +
+  #geom_line(size = 1)+
+  theme_minimal()+
+  theme(
+      axis.title = element_text(size = 20),
+      axis.text = element_text(size = 18),
+      legend.text=element_text(size=18),
+      legend.title=element_text(size=18)
+      )+
+  scale_color_brewer(palette="Set2", labels = c("Eng", "Can-M", "Chi-M"), name="Group") +
+  xlim(1,5)+
+  #xlab("Average rating distributions for nasal-dffered conditions")+
+  xlab("Similarity rating score")+
+  ylab("Density")
+```
+
+Here is another plot that shows the predicted mean distributions for vowel-differed conditions for the three groups. We can see that the average rating of English listeners is higher than the two Mandarin groups. And the variability of the mean distribution is smaller for the two Mandarin groups than the English group, as the distribution of the English group is more spread out. Compared to the previous nasal plot, we can see that the ratings drop for all groups. However, Mandarin listeners drop more drastically than English listeners, consistent with the interaction effect interpreted from the model. 
+
+```{r, echo =FALSE}
+#Calculate the posterior mean predictions for vowels
+#English vowel
+means_v_eng <- p1[,4,1:5] %*% 1:5
+#Mandarin-CAN vowel
+means_v_mcan <- p1[,5,1:5] %*% 1:5
+#Mandarin-CHI vowel
+means_v_mchi <- p1[,6,1:5] %*% 1:5
+
+#plot the distribution of the predicted means
+mean_vow <- tibble(group=rep(c("ENG", "MAN-CAN", "MAN-CHI"), c(length(means_v_eng), length(means_v_mcan), length(means_v_mchi))),
+                  rating=c(means_v_eng, means_v_mcan, means_v_mchi)
+)
+
+ggplot(mean_vow, aes(x=rating, col=group)) +
+  geom_density(size = 1) +
+  theme_minimal()+
+  theme(
+      axis.title = element_text(size = 20),
+      axis.text = element_text(size = 18),
+      legend.text=element_text(size=18),
+      legend.title=element_text(size=18)
+      )+
+  scale_color_brewer(palette="Set2", labels = c("Eng", "Can-M", "Chi-M"), name="Group") +
+  xlim(1,5) +
+  #xlab("Average rating distributions for vowel-dffered conditions")+
+  xlab("Similarity rating score")+
+  ylab("Density")
+```
+
+Finally, I plotted the estimated probabilities for the five rating scores across groups and conditions. We can see that the vowel condition has lower rating scores than nasal across all three groups. Although there is no clear group effect in the nasal condition, Mandarin listeners tend to rate vowel-differed sequences lower than English listeners.
+
+```{r}
+conditions <- data.frame(condition = c("nasal", "vowel"), cond__ = c("nasal", "vowel"))
+pm1 <- conditional_effects(m1, conditions = conditions, effects ="group.l", categorical = TRUE)
+
+plot1 <- plot(pm1, plot = FALSE)[[1]] +
+  #theme_minimal() +
+  theme(axis.title.x=element_blank(), panel.grid.major.y = element_blank(),
+    panel.grid.minor.y = element_blank()) +
+  ylim(0, 1)+
+  theme_bw()+
+  xlab("")
+ggsave(plot1, filename = "sr.png", width = 10, height = 5)
+```
+
+
+Conclusions:
+Now we can go back to answer the three main questions stated at the beginning, based on what we see from the model summary and the plots:
+
+1. Effects of listener groups: although Mandarin listeners tend to perceive the VN sequences as more different than English listeners (and Mandarin in Canada listeners as slightly more different than Mandarin in China listeners), the group effect is not very strongly evidenced.
+
+2. Effects of nasal vs. vowel cue: nasal-differed VN sequences are perceived as more similar than vowel-differed VN sequences, presumably because vowel cues are more salient than nasal cues.
+
+3. Interaction effect: the perceived similarity difference between nasal-differed sequences and vowel-differed sequences is larger in the two Mandarin groups than the English group.
+
+
+References:
+
+Bürkner P (2017). “brms: An R Package for Bayesian Multilevel Models Using Stan.” Journal of Statistical Software, 80(1), 1–28. doi:10.18637/jss.v080.i01.
+
+Bürkner P (2018). “Advanced Bayesian Multilevel Modeling with the R Package brms.” The R Journal, 10(1), 395–411. doi:10.32614/RJ-2018-017.
+
+Bürkner, Paul-Christian, and Matti Vuorre. "Ordinal regression models in psychology: A tutorial." Advances in Methods and Practices in Psychological Science 2.1 (2019): 77-101.
+
+Liddell, T., & Kruschke, J. K. (2017). Analyzing ordinal data with metric models: What
+could possibly go wrong? Journal of Experimental Social Psychology, 79, 328–348.
+
+
+
+
